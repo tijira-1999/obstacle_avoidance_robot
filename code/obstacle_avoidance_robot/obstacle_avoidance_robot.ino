@@ -7,7 +7,7 @@
 #define ECHO_PINL A3 // Pin A3 on the Motor Drive Shield soldered to the ultrasonic sensor
 #define TRIG_PINR A4 // Pin A4 on the Motor Drive Shield soldered to the ultrasonic sensor
 #define ECHO_PINR A5 // Pin A5 on the Motor Drive Shield soldered to the ultrasonic sensor
-#define MAX_SPEED 75 // sets speed of DC traction motors to 150/250 or about 70% of full speed - to get power drain down.
+#define MAX_SPEED 80 // sets speed of DC traction motors to 150/250 or about 70% of full speed - to get power drain down.
 #define MAX_SPEED_OFFSET 40 // this sets offset to allow for differences between the two DC traction motors
 #define COLL_DIST 40 // sets distance at which robot stops and reverses to 30cm
 #define TURN_DIST COLL_DIST+20 // sets distance at which robot veers away from object
@@ -36,7 +36,7 @@ void setup() {
   delay(600); // delay for one seconds
   pinMode(TRIG_PIN,OUTPUT);
   pinMode(ECHO_PIN,INPUT);
-  Serial.begin(9600);
+//  Serial.begin(9600);
    pinMode(soundpin,INPUT);
   pinMode(TRIG_PINR,OUTPUT);
  pinMode(ECHO_PINR,INPUT);
@@ -50,19 +50,20 @@ void loop() {
   sound1();
   myservo.write(90);  // move eyes forward
   delay(90);
+  int jk=map(analogRead(A6),35,900,0,1);
+  int jj=map(analogRead(A7),35,900,0,1);
+//  Serial.println(jk);
+//  Serial.println(jj);
   curDist = readPing();   // read distance
-  //int s=forecheck();
-  //int q=forecheck1();
-  if ((curDist < COLL_DIST)/*||s==1*/) {if (curDist<=10){moveBackward3();}else{changePath();}}  // if forward is blocked change direction
-  else {moveForward();delay(200);}
- 
+  if ((curDist < COLL_DIST) || (jj==0 || jk==0)) { changePath();}  // if forward is blocked change direction
+ else { moveForward(); delay(200);} // move forward
+  
  }
 //-------------------------------------------------------------------------------------------------------------------------------------
 
 void changePath() {
-     
   moveBackward2();
-  moveStop();            // stop forward movement
+  moveStop();   // stop forward movement
   myservo.write(36);  // check distance to the right
     delay(500);
     rightDistance = readPing(); //set right distance
@@ -80,18 +81,27 @@ void changePath() {
 void compareDistance()   // find the longest distance
 {
   if ((leftDistance>rightDistance)&&(rightDistance>10 && leftDistance>10)) //if left is less obstructed 
-  {Serial.print("left");
+  {//Serial.print("left");
     turnLeft();
   }
   else if ((rightDistance>leftDistance)&&(rightDistance>10 && leftDistance>10)) //if right is less obstructed
-  {Serial.print("right");
+  {//Serial.print("right");
     turnRight();
   }
-   else if (rightDistance<=10 && leftDistance<=10) {Serial.print("backwards"); moveBackward();}
+   else if (rightDistance<=10 && leftDistance<=10) 
+   {/*Serial.print("backwards");*/
+    moveBackward();
+   }
   else                    //if they are equally obstructed
-  {Serial.print("back");
-  if (leftDistance<10){Serial.print("turnaroundR");turnAroundR();}
-  else {Serial.print(" turnAroundL");turnAroundL();}
+  {//Serial.print("back");
+  if (leftDistance<10)
+  {//Serial.print("turnaroundR");
+    turnAroundR();
+    }
+  else 
+  {//Serial.print(" turnAroundL");
+  turnAroundL();
+  }
   }
 }
 
@@ -108,25 +118,13 @@ int readPing()
 
  duration = pulseIn(ECHO_PIN,255);
  distance = (duration*.0343)/2;
- Serial.print("Distance: ");
- Serial.println(distance);
+// Serial.print("Distance: ");
+// Serial.println(distance);
  return distance;
  
 }
 //-------------------------------------------------------------------------------------------------------------------------------------
 void moveStop() {leftMotor1.run(RELEASE); leftMotor2.run(RELEASE); rightMotor1.run(RELEASE); rightMotor2.run(RELEASE);}  // stop the motors.
-void moveForward2(){
-   motorSet = "BACKWARD";
-    leftMotor1.run(FORWARD);     // turn it on going backward
-    leftMotor2.run(FORWARD);     // turn it on going backward
-    leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
-    leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
-    rightMotor1.run(FORWARD);    // turn it on going backward
-    rightMotor2.run(FORWARD);    // turn it on going backward
-    rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
-    rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
-    delay(50);
-}
 void moveBackward2(){
    motorSet = "BACKWARD";
     leftMotor1.run(BACKWARD);     // turn it on going backward
@@ -140,6 +138,7 @@ void moveBackward2(){
     delay(50);
 }
 //-------------------------------------------------------------------------------------------------------------------------------------
+
 void moveForward() {
   check();
     motorSet = "FORWARD";
@@ -157,26 +156,6 @@ void moveForward() {
   }
 }
 //-------------------------------------------------------------------------------------------------------------------------------------
-void moveBackward3(){
-  moveBackward2();
-  int statu=digitalRead(soundpin);
- if (statu==0){moveForward2(); changePath();}
- else{
-   motorSet = "BACKWARD";
-    leftMotor1.run(BACKWARD);     // turn it on going backward
-    leftMotor2.run(BACKWARD);     // turn it on going backward
-    rightMotor1.run(BACKWARD);    // turn it on going backward
-    rightMotor2.run(BACKWARD);    // turn it on going backward
-  for (speedSet = 0; speedSet < MAX_SPEED; speedSet +=2) // slowly bring the speed up to avoid loading down the batteries too quickly
-  {
-    leftMotor1.setSpeed(speedSet);
-    leftMotor2.setSpeed(speedSet);
-    rightMotor1.setSpeed(speedSet); 
-    rightMotor2.setSpeed(speedSet); 
-    delay(10);
-  }delay(350);
-}
-}
 void moveBackward1(){
    motorSet = "BACKWARD";
     leftMotor1.run(BACKWARD);     // turn it on going backward
@@ -190,7 +169,7 @@ void moveBackward1(){
     rightMotor1.setSpeed(speedSet); 
     rightMotor2.setSpeed(speedSet); 
     delay(10);
-  }delay(350);
+  }delay(400);
 }
 void moveBackward()
 {   
@@ -232,15 +211,15 @@ void moveBackward()
 //-------------------------------------------------------------------------------------------------------------------------------------
 void turnRight() {
   motorSet = "RIGHT";
-  leftMotor1.run(FORWARD);      // turn motor 1 forward
-  leftMotor2.run(FORWARD);      // turn motor 2 forward
-  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
-  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
   rightMotor1.run(BACKWARD);    // turn motor 3 backward
   rightMotor2.run(BACKWARD);    // turn motor 4 backward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);  
-  delay(510); // run motors this way for 1500        
+  leftMotor1.run(FORWARD);      // turn motor 1 forward
+  leftMotor2.run(FORWARD);      // turn motor 2 forward
+  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
+  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
+  delay(550); // run motors this way for 1500        
  
 }  
 //-------------------------------------------------------------------------------------------------------------------------------------
@@ -254,34 +233,34 @@ void turnLeft() {
   rightMotor2.run(FORWARD);     // turn motor 4 forward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
-  delay(510); // run motors this way for 1500  
+  delay(550); // run motors this way for 1500  
   
 }  
 //-------------------------------------------------------------------------------------------------------------------------------------
 void turnAroundR1() {
   motorSet = "RIGHT";
-  leftMotor1.run(FORWARD);      // turn motor 1 forward
-  leftMotor2.run(FORWARD);      // turn motor 2 forward
-  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
-  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
   rightMotor1.run(BACKWARD);    // turn motor 3 backward
   rightMotor2.run(BACKWARD);    // turn motor 4 backward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
-  delay(1000); // run motors this way for 1700
+  leftMotor1.run(FORWARD);      // turn motor 1 forward
+  leftMotor2.run(FORWARD);      // turn motor 2 forward
+  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
+  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
+  delay(900); // run motors this way for 1700
     
 }
 void turnAroundR() {
   motorSet = "RIGHT";
-  leftMotor1.run(FORWARD);      // turn motor 1 forward
-  leftMotor2.run(FORWARD);      // turn motor 2 forward
-  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
-  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
   rightMotor1.run(BACKWARD);    // turn motor 3 backward
   rightMotor2.run(BACKWARD);    // turn motor 4 backward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
-  delay(900); // run motors this way for 1700
+  leftMotor1.run(FORWARD);      // turn motor 1 forward
+  leftMotor2.run(FORWARD);      // turn motor 2 forward
+  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
+  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
+  delay(930); // run motors this way for 1700
     
 }
 void turnAroundL() {
@@ -294,12 +273,13 @@ void turnAroundL() {
   rightMotor2.run(FORWARD);    // turn motor 4 backward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
-  delay(900); // run motors this way for 1700
+  delay(930); // run motors this way for 1700
      
 }    
 void check() 
 { // read the ultrasonic sensor distance
-  Serial.println("insidecheck()");
+  //Serial.println("insidecheck()");
+
    analogWrite(TRIG_PINR,0);
  delayMicroseconds(2);
   analogWrite(TRIG_PINR,255);
@@ -308,9 +288,8 @@ void check()
 
  durationR = pulseIn(ECHO_PINR,255);
  distanceR = (durationR*.0343)/2;
- Serial.print("DistanceR: ");
- Serial.println(distanceR);
- //return distance;
+ //Serial.print("DistanceR: ");
+ //Serial.println(distanceR);
  
 analogWrite(TRIG_PINL,0);
  delayMicroseconds(2);
@@ -320,28 +299,28 @@ analogWrite(TRIG_PINL,0);
 
  durationL = pulseIn(ECHO_PINL,255);
  distanceL = (durationL*.0343)/2;
- Serial.print("DistanceL: ");
- Serial.println(distanceL);
+ //Serial.print("DistanceL: ");
+ //Serial.println(distanceL);
 
  if (distanceR<10 || distanceL<10)
- {Serial.print("insidecheck             if");
-  moveStop();
+ {//Serial.print("insidecheck             if");
+  //moveStop();
   if (distanceR>distanceL){rightS();}
   else {leftS();}
  }
 }
 
 void rightS() {
-  motorSet = "RIGHT";
-  leftMotor1.run(FORWARD);      // turn motor 1 forward
-  leftMotor2.run(FORWARD);      // turn motor 2 forward
-  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
-  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
+  motorSet = "RIGHT"; 
   rightMotor1.run(BACKWARD);    // turn motor 3 backward
   rightMotor2.run(BACKWARD);    // turn motor 4 backward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);  
-  delay(230); // run motors this way for 1500        
+  leftMotor1.run(FORWARD);      // turn motor 1 forward
+  leftMotor2.run(FORWARD);      // turn motor 2 forward
+  leftMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);     
+  leftMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);    
+  delay(220); // run motors this way for 1500        
  
 }  
 //-------------------------------------------------------------------------------------------------------------------------------------
@@ -355,7 +334,7 @@ void leftS() {
   rightMotor2.run(FORWARD);     // turn motor 4 forward
   rightMotor1.setSpeed(speedSet+MAX_SPEED_OFFSET);      
   rightMotor2.setSpeed(speedSet+MAX_SPEED_OFFSET);  
-  delay(230); // run motors this way for 1500  
+  delay(220); // run motors this way for 1500  
   
 }  
 int sound()
@@ -377,7 +356,7 @@ void sound1()
      if (k>=30){leftS();rightS();leftS();rightS();}
      else {changePath();}
   }
-  else {return 0;}
+  //else {return 0;}
 }
 int backservo()
 {
@@ -398,4 +377,3 @@ int backservo()
     else if(g==1){moveStop();turnAroundR1();moveBackward1();return 1;}
     else {return 0;}
 }
-
